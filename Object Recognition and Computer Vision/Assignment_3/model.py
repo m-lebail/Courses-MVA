@@ -2,35 +2,39 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.models as models
-from torchvision.models import ResNet18_Weights, ResNet50_Weights
+
 
 nclasses = 250
 
 
-resnet34 = models.resnet34(weights='IMAGENET1K_V1')
-for param in resnet34.parameters():
-     param.requires_grad = False
-for param in resnet34.layer4.parameters():
-    param.requires_grad = True
-for param in resnet34.layer3[-1].parameters():
-    param.requires_grad = True
-num_ftrs = resnet34.fc.in_features
-resnet34.fc = nn.Sequential(
-  nn.Dropout(0.1),
-  nn.Linear(num_ftrs, nclasses)
-)
+def get_resnet34():
+  resnet34 = models.resnet34(weights='IMAGENET1K_V1')
+  #Initially, train only the added classification layer for a few 
+  #epochs
+  for param in resnet34.parameters():
+      param.requires_grad = False
+  num_ftrs = resnet34.fc.in_features
+  resnet34.fc = nn.Sequential(
+    # nn.Linear(num_ftrs, num_ftrs),
+    # nn.ReLU(),
+    nn.Dropout(0.7),
+    nn.Linear(num_ftrs, nclasses)
+  )
+  return resnet34
 
-resnet = models.resnet18(weights='IMAGENET1K_V1')
-for param in resnet.parameters():
-    param.requires_grad = False
-for param in resnet.layer4.parameters():
-    param.requires_grad = True
-num_ftrs = resnet.fc.in_features
-resnet.fc = nn.Sequential(
-  nn.Dropout(0.1),
-  nn.Linear(num_ftrs, nclasses)
-
-)
+def get_resnet18():
+  resnet = models.resnet18(weights='IMAGENET1K_V1')
+  for param in resnet.parameters():
+      param.requires_grad = False
+  
+  num_ftrs = resnet.fc.in_features
+  resnet.fc = nn.Sequential(
+    # nn.Linear(num_ftrs, num_ftrs),
+    # nn.ReLU(),
+    nn.Dropout(0.7),
+    nn.Linear(num_ftrs, nclasses)
+  )
+  return resnet
 
 
 class Net(nn.Module):

@@ -8,22 +8,8 @@ data_transforms = transforms.Compose([
     transforms.Resize((64, 64)),
     transforms.ToTensor(),
     transforms.Normalize(
-        #mean=[0.485, 0.456, 0.406],
-        #std=[0.229, 0.224, 0.225]
-        mean = 0.9822,
-        std = 0.0538
-    )
-])
-
-
-data_transforms_densenet = transforms.Compose([
-    transforms.Resize((256,256)),
-    transforms.CenterCrop((224,224)),
-    transforms.ToTensor(),
-    #transforms.Grayscale(1),
-    transforms.Normalize(
-        mean = 0.9767,
-        std = 0.1078
+        mean=[0.485, 0.456, 0.406],
+        std=[0.229, 0.224, 0.225]
     )
 ])
 
@@ -31,21 +17,26 @@ data_transforms_densenet = transforms.Compose([
 data_transforms_resnet = transforms.Compose([
     transforms.Resize((256,256)),
     transforms.CenterCrop((224,224)),
+    #transforms.Resize((224,224)),
     transforms.ToTensor(),
     #transforms.Grayscale(1),
     transforms.Normalize(
-        mean = 0.9767,
-        std = 0.1078
+        mean = 0.485,
+        std = 0.229
     )
 ])
 
-data_transforms_resnet50 = transforms.Compose([
-    transforms.Resize((232,232)),
+data_transforms_resnet_rotation_flip = transforms.Compose([
+    transforms.RandomHorizontalFlip(),  # Randomly flip horizontally
+    transforms.RandomRotation(degrees=30),  # Randomly rotate by up to 15 degrees
+    transforms.Resize((256,256)),
     transforms.CenterCrop((224,224)),
     transforms.ToTensor(),
     #transforms.Grayscale(1),
     transforms.Normalize(
-        mean = 0.9809,
-        std = 0.0949
+        mean = 0.485,
+        std = 0.229
     )
 ])
+
+

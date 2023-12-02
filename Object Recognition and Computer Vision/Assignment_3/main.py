@@ -62,6 +62,20 @@ def opts() -> argparse.ArgumentParser:
         help="SGD momentum (default: 0.5)",
     )
     parser.add_argument(
+        "--unfreeze",
+        type=float,
+        default=4,
+        metavar="UF",
+        help="Epoch to start unfreezing (default: 4)",
+    )
+    parser.add_argument(
+        "--weight_decay",
+        type=float,
+        default=0.001,
+        metavar="WD",
+        help="weight decay (default: 0.001)",
+    )
+    parser.add_argument(
         "--seed", type=int, default=1, metavar="S", help="random seed (default: 1)"
     )
     parser.add_argument(
@@ -146,7 +160,7 @@ def train(
             100.0 * correct / len(train_loader.dataset),
         )
     )
-    metrics = {"train_loss " : loss.data.item(), "train_accuracy " : 100.0 * correct / len(train_loader.dataset)}
+    metrics = {"train_loss" : loss.data.item(), "train_accuracy" : 100.0 * correct / len(train_loader.dataset)}
     wandb.log({**metrics})
 
 
@@ -188,12 +202,12 @@ def validation(
             100.0 * correct / len(val_loader.dataset),
         )
     )
-    metrics_val = {"val_loss " : validation_loss, "val_accuracy " : 100.0 * correct / len(val_loader.dataset)}
+    metrics_val = {"val_loss" : validation_loss, "val_accuracy" : 100.0 * correct / len(val_loader.dataset)}
     wandb.log({**metrics_val})
     return validation_loss
 
 
-def main():
+def main(config=None):
     
     
     """Default Main Function."""
@@ -205,9 +219,12 @@ def main():
         config={"learning_rate" : args_.lr ,
                 "batch_size ": args_.batch_size,
                 "epochs ": args_.epochs,
-                "momentum" : args_.momentum
+                "momentum" : args_.momentum,
+                "unfreeze" : args_.unfreeze,
+                "weight_decay": args_.weight_decay
                 }
     )
+    #with wandb.init(config=config):
 
     # Check if cuda is available
     use_cuda = torch.cuda.is_available()
@@ -229,14 +246,23 @@ def main():
         print("Using CPU")
 
     # Data initialization and loading
+    original_dataset = datasets.ImageFolder(args_.data + "/train_images", transform=data_transforms[0])
+    #Data augmentation
+    rotation_dataset = datasets.ImageFolder(args_.data + "/train_images", transform=data_transforms[1])
+    # Concatenate datasets
+    merged_dataset = torch.utils.data.ConcatDataset([original_dataset, rotation_dataset])
+    
+
     train_loader = torch.utils.data.DataLoader(
-        datasets.ImageFolder(args_.data + "/train_images", transform=data_transforms),
+        #datasets.ImageFolder(args_.data + "/train_images", transform=data_transforms),
+        merged_dataset,
         batch_size=args_.batch_size,
         shuffle=True,
         num_workers=args_.num_workers,
     )
+   
     val_loader = torch.utils.data.DataLoader(
-        datasets.ImageFolder(args_.data + "/val_images", transform=data_transforms),
+        datasets.ImageFolder(args_.data + "/val_images", transform=data_transforms[0]),
         batch_size=args_.batch_size,
         shuffle=False,
         num_workers=args_.num_workers,
@@ -244,18 +270,24 @@ def main():
 
     # Setup optimizer
     if args_.model_name != "basic_cnn":
-      optimizer = optim.SGD(filter(lambda p: p.requires_grad, model.parameters()), lr=args_.lr, momentum=args_.momentum)
+        optimizer = optim.SGD(filter(lambda p: p.requires_grad, model.parameters()), lr=args_.lr, momentum=args_.momentum)
     else:
-      optimizer = optim.SGD(model.parameters(), lr=args_.lr, momentum=args_.momentum)
+        optimizer = optim.SGD(model.parameters(), lr=args_.lr, momentum=args_.momentum)
 
     
 
     # Loop over the epochs
     best_val_loss = 1e8
     for epoch in range(1, args_.epochs + 1):
+        
+        if epoch == args_.unfreeze:
+            for param in model.parameters():
+               param.requires_grad = True
+            optimizer = optim.SGD(filter(lambda p: p.requires_grad, model.parameters()), lr=args_.lr/10, momentum=args_.momentum, weight_decay=args_.weight_decay)
+            
         # training loop
         train(model, optimizer, train_loader, use_cuda, epoch, args_)
-        #xmp.spawn(train, args=(model, optimizer, train_loader, use_cuda, epoch, args_), nprocs=8, start_method='fork')
+    
         # validation loop
         val_loss = validation(model, val_loader, use_cuda)
         if val_loss < best_val_loss:
@@ -273,8 +305,10 @@ def main():
             + best_model_file
             + "` to generate the Kaggle formatted csv file\n"
         )
-    
+     
+
     wandb.finish()
 
 if __name__ == "__main__":
     main()
+    

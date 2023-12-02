@@ -1,7 +1,7 @@
 """Python file to instantite the model and the transform that goes with it."""
 from model import Net
-from model import densenet, resnet, resnet34
-from data import data_transforms, data_transforms_densenet, data_transforms_resnet, data_transforms_resnet50
+from model import get_resnet18, get_resnet34
+from data import data_transforms,data_transforms_resnet, data_transforms_resnet_rotation_flip
 
 
 class ModelFactory:
@@ -13,24 +13,20 @@ class ModelFactory:
     def init_model(self):
         if self.model_name == "basic_cnn":
             return Net()
-        elif self.model_name == "densenet":
-          return densenet
-        elif self.model_name == "resnet":
-          return resnet
+        elif self.model_name == "resnet18":
+          return get_resnet18()
         elif self.model_name == "resnet34":
-          return resnet34
+          return get_resnet34()
         else:
             raise NotImplementedError("Model not implemented")
 
     def init_transform(self):
         if self.model_name == "basic_cnn":
-            return data_transforms
-        elif self.model_name == "densenet":
-            return data_transforms_densenet
-        elif self.model_name == "resnet":
-            return data_transforms_resnet
+            return [data_transforms]
+        elif self.model_name == "resnet18":
+            return [data_transforms_resnet,data_transforms_resnet_rotation_flip]
         elif self.model_name == "resnet34":
-            return data_transforms_resnet
+            return [data_transforms_resnet,data_transforms_resnet_rotation_flip]
         else:
             raise NotImplementedError("Transform not implemented")
 
